@@ -377,13 +377,7 @@ public class MecanumMPC {
      * Predict next state using the model.
      */
     private double[] predictNextState(double[] state, double[] u) {
-        try {
-            // Try using the solver method first if available
-            return system.nextStateSolver(state, u, deltaTime);
-        } catch (Exception e) {
-            // Fall back to regular nextState method
-            return system.nextState(state, u, deltaTime);
-        }
+        return system.nextStateSolver(state, u, deltaTime);
     }
 
     /**

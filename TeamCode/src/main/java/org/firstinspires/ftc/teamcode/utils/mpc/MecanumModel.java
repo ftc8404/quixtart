@@ -40,7 +40,7 @@ public class MecanumModel {
      * Default constructor with predefined parameters
      */
     public MecanumModel() {
-        this(5.0, 2.0, 0.8, 1.0, 0.5, 0.5, 1.0, 1.0);
+        this(17.4, .51124, 0.8, 1.0, 0.5, 0.5, 1.0, 1.0);
     }
 
     /**
