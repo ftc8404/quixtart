@@ -9,6 +9,8 @@ import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 
 import org.firstinspires.ftc.teamcode.utils.mpc.MecanumModel;
 
+import java.util.Arrays;
+
 @TeleOp
 public class MPCTest extends OpMode {
 
@@ -26,20 +28,23 @@ public class MPCTest extends OpMode {
     public void loop() {
         if (oldTime == 0) {
             deltaTime = 0;
+            currentTime = (double) System.currentTimeMillis() / 1000;
+            oldTime = currentTime;
         } else {
-            currentTime = (double) System.nanoTime() / 1000000;
+            currentTime = (double) System.currentTimeMillis() / 1000;
             deltaTime = currentTime - oldTime;
-            currentTime = oldTime;
+            oldTime = currentTime;
         }
 
+        telemetry.addData(Arrays.toString(control), deltaTime);
         model.stepSolver(control, deltaTime);
         state = model.getState();
 
-        plotSquareOnDashboard(state[0], state[1], Math.toDegrees(state[2]), 4.0, "red", 2);
+        plotSquareOnDashboard(state[0], state[1], Math.toDegrees(state[2]), 16.0, "red", 2);
 
-        control[0] = gamepad1.left_stick_x;
-        control[1] = -gamepad1.left_stick_y;
-        control[2] = gamepad1.right_stick_x;
+        control[0] = gamepad1.left_stick_x * model.getMaxForceX();
+        control[1] = -gamepad1.left_stick_y * model.getMaxForceY();
+        control[2] = -gamepad1.right_stick_x * model.getMaxTorque();
     }
 
     public void plotSquareOnDashboard(double xCenter, double yCenter, double rotation,
