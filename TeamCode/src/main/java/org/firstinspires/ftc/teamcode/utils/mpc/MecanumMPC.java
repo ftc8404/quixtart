@@ -52,17 +52,10 @@ public class MecanumMPC {
         this.r = r;
         this.deltaTime = deltaTime;
 
-        // Get constraints from the model if possible, otherwise use defaults
-        try {
-            this.maxForceX = system.getMaxForceX();
-            this.maxForceY = system.getMaxForceY();
-            this.maxTorque = system.getMaxTorque();
-        } catch (Exception e) {
-            // If getters don't exist, use reasonable defaults
-            this.maxForceX = 0.5;
-            this.maxForceY = 0.5;
-            this.maxTorque = 1.0;
-        }
+        // Get constraints from the model
+        this.maxForceX = system.getMaxForceX();
+        this.maxForceY = system.getMaxForceY();
+        this.maxTorque = system.getMaxTorque();
 
         // Default trajectory generator (circular path)
         this.trajectoryGenerator = new TrajectoryGenerator() {
@@ -146,9 +139,7 @@ public class MecanumMPC {
         // Reshape the flattened control sequence to 3D vectors
         double[][] uSequenceReshaped = new double[uSequence.length / 3][3];
         for (int i = 0; i < uSequence.length / 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                uSequenceReshaped[i][j] = uSequence[i * 3 + j];
-            }
+            System.arraycopy(uSequence, i * 3, uSequenceReshaped[i], 0, 3);
         }
 
         // Sum costs over the prediction horizon
@@ -260,9 +251,7 @@ public class MecanumMPC {
         // Reshape into 2D array for return
         double[][] controlSequence = new double[horizon][controlDimension];
         for (int i = 0; i < horizon; i++) {
-            for (int j = 0; j < controlDimension; j++) {
-                controlSequence[i][j] = optimizedControls[i * controlDimension + j];
-            }
+            System.arraycopy(optimizedControls, i * 3, controlSequence[i], 0, controlDimension);
         }
 
         return controlSequence;
