@@ -14,14 +14,15 @@ import java.util.Arrays;
 @TeleOp
 public class MPCTest extends OpMode {
 
-    MecanumModel model;
+    MecanumModel model, solverModel;
     double oldTime = 0, currentTime, deltaTime;
     double[] control = new double[3];
-    double[] state = new double[6];
+    double[] state = new double[6], solverState = new double[6];
 
     @Override
     public void init() {
         model = new MecanumModel();
+        solverModel = new MecanumModel();
     }
 
     @Override
@@ -37,10 +38,13 @@ public class MPCTest extends OpMode {
         }
 
         telemetry.addData(Arrays.toString(control), deltaTime);
-        model.stepSolver(control, deltaTime);
+        solverModel.stepSolver(control, deltaTime);
+        model.step(control, deltaTime);
         state = model.getState();
+        solverState = solverModel.getState();
 
         plotSquareOnDashboard(state[0], state[1], Math.toDegrees(state[2]), 16.0, "red", 2);
+        plotSquareOnDashboard(solverState[0], solverState[1], Math.toDegrees(solverState[2]), 16.0, "blue", 2);
 
         control[0] = gamepad1.left_stick_x * model.getMaxForceX();
         control[1] = -gamepad1.left_stick_y * model.getMaxForceY();
@@ -91,6 +95,11 @@ public class MPCTest extends OpMode {
                     rotatedCorners[nextI][0], rotatedCorners[nextI][1]
             );
         }
+        canvas.strokeLine(
+                (rotatedCorners[0][0] + rotatedCorners[1][0] + rotatedCorners[2][0] + rotatedCorners[3][0]) / 4,
+                (rotatedCorners[0][1] + rotatedCorners[1][1] + rotatedCorners[2][1] + rotatedCorners[3][1]) / 4,
+                (rotatedCorners[2][0] + rotatedCorners[3][0]) / 2, (rotatedCorners[2][1] + rotatedCorners[3][1]) / 2
+        );
 
         // Send packet to dashboard
         FtcDashboard.getInstance().sendTelemetryPacket(packet);
