@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode.teleop.test;
 
+import com.acmerobotics.dashboard.config.Config;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 
@@ -7,22 +8,35 @@ import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.canvas.Canvas;
 import com.acmerobotics.dashboard.telemetry.TelemetryPacket;
 
+import org.firstinspires.ftc.teamcode.utils.mpc.MecanumMPC;
 import org.firstinspires.ftc.teamcode.utils.mpc.MecanumModel;
 
 import java.util.Arrays;
 
 @TeleOp
+@Config
 public class MPCTest extends OpMode {
 
+    public static final int DELTA_TIME_WINDOW = 10;
+    public static final int MPC_WINDOW = 8;
+
     MecanumModel model, solverModel;
-    double oldTime = 0, currentTime, deltaTime;
+    MecanumMPC mpc;
+    double oldTime = 0, currentTime, deltaTime, deltaTimeSum;
+    double[] deltaTimes = new double[DELTA_TIME_WINDOW];
+    int deltaTimesPointer = 0;
     double[] control = new double[3];
+    double[][] mpcControl = new double[MPC_WINDOW][3];
     double[] state = new double[6], solverState = new double[6];
+    TelemetryPacket packet;
 
     @Override
     public void init() {
         model = new MecanumModel();
+        mpc = new MecanumMPC(model);
+        mpc.setHorizon(MPC_WINDOW);
         solverModel = new MecanumModel();
+        packet = new TelemetryPacket();
     }
 
     @Override
@@ -30,31 +44,42 @@ public class MPCTest extends OpMode {
         if (oldTime == 0) {
             deltaTime = 0;
             currentTime = (double) System.currentTimeMillis() / 1000;
-            oldTime = currentTime;
         } else {
             currentTime = (double) System.currentTimeMillis() / 1000;
             deltaTime = currentTime - oldTime;
-            oldTime = currentTime;
         }
+        oldTime = currentTime;
 
+        // update value at pointer in deltaTimes list, then move pointer in loop around list
+        // then update mpc deltaTime with average deltatime of the last DELTA_TIME_WINDOW ticks
+        deltaTimes[deltaTimesPointer++ % 10] = deltaTime;
+        deltaTimeSum = 0;
+        for (double t: deltaTimes) deltaTimeSum += t;
+        mpc.setDeltaTime(deltaTimeSum / DELTA_TIME_WINDOW);
+
+        //update model controls, then step the models
         telemetry.addData(Arrays.toString(control), deltaTime);
         solverModel.stepSolver(control, deltaTime);
-        model.step(control, deltaTime);
+
+        mpcControl = mpc.optimize(state, time);
+        model.stepSolver(mpcControl[0], deltaTime);
+
+        // update model states
         state = model.getState();
         solverState = solverModel.getState();
 
-        plotSquareOnDashboard(state[0], state[1], Math.toDegrees(state[2]), 16.0, "red", 2);
-        plotSquareOnDashboard(solverState[0], solverState[1], Math.toDegrees(solverState[2]), 16.0, "blue", 2);
+        packet = plotSquareOnDashboard(state[0], state[1], Math.toDegrees(state[2]), 16.0, "red", 2, packet);
+        packet = plotSquareOnDashboard(solverState[0], solverState[1], Math.toDegrees(solverState[2]), 16.0, "blue", 2, packet);
 
         control[0] = gamepad1.left_stick_x * model.getMaxForceX();
         control[1] = -gamepad1.left_stick_y * model.getMaxForceY();
         control[2] = -gamepad1.right_stick_x * model.getMaxTorque();
+        FtcDashboard.getInstance().sendTelemetryPacket(packet);
     }
 
-    public void plotSquareOnDashboard(double xCenter, double yCenter, double rotation,
-                                      double sideLength, String color, int strokeWidth) {
+    public TelemetryPacket plotSquareOnDashboard(double xCenter, double yCenter, double rotation,
+                                      double sideLength, String color, int strokeWidth, TelemetryPacket packet) {
         // Create telemetry packet for dashboard
-        TelemetryPacket packet = new TelemetryPacket();
         Canvas canvas = packet.fieldOverlay();
 
         // Calculate half side length for corner calculations
@@ -101,8 +126,8 @@ public class MPCTest extends OpMode {
                 (rotatedCorners[2][0] + rotatedCorners[3][0]) / 2, (rotatedCorners[2][1] + rotatedCorners[3][1]) / 2
         );
 
-        // Send packet to dashboard
-        FtcDashboard.getInstance().sendTelemetryPacket(packet);
+        // output telemetry packet
+        return packet;
     }
 
 }

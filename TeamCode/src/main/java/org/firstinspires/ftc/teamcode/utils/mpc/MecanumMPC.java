@@ -81,7 +81,7 @@ public class MecanumMPC {
      * Constructor with default values
      */
     public MecanumMPC(MecanumModel system) {
-        this(system, 5, 1.0, 2.0, 0.1, 0.1);
+        this(system, 8, 1.0, 2.0, 0.1, 0.1);
     }
 
     /**
